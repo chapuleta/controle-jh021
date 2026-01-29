@@ -269,6 +269,9 @@
                 statusEl.textContent = '✅ Conectado ao ESP32';
                 statusEl.onclick = null;
                 
+                // Dispara evento de conexão
+                document.dispatchEvent(new Event('bleconnected'));
+                
                 console.log('BLE conectado com sucesso!');
                 
             } catch (error) {
@@ -283,15 +286,71 @@
             console.log('BLE desconectado');
             const statusEl = document.getElementById('ble-status');
             statusEl.className = 'disconnected';
-            statusEl.textContent = '🔵 Clique para Conectar BLE';
-            statusEl.onclick = connectBLE;
+            statusEl.textContent = '� Reconectando...';
             bleCharacteristic = null;
+            
+            // Reconecta automaticamente após 2 segundos
+            setTimeout(() => {
+                if (bleDevice) {
+                    console.log('Tentando reconectar...');
+                    reconnect();
+                } else {
+                    statusEl.textContent = '🔵 Clique para Conectar BLE';
+                    statusEl.onclick = connectBLE;
+                }
+            }, 2000);
+        }
+        
+        async function reconnect() {
+            const statusEl = document.getElementById('ble-status');
+            try {
+                const server = await bleDevice.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                bleCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+                await bleCharacteristic.startNotifications();
+                bleCharacteristic.addEventListener('characteristicvaluechanged', handleNotification);
+                
+                statusEl.className = 'connected';
+                statusEl.textContent = '✅ Reconectado ao ESP32';
+                statusEl.onclick = null;
+                console.log('Reconectado com sucesso!');
+            } catch (error) {
+                console.error('Erro ao reconectar:', error);
+                statusEl.className = 'disconnected';
+                statusEl.textContent = '🔵 Clique para Conectar BLE';
+                statusEl.onclick = connectBLE;
+            }
         }
 
         function handleNotification(event) {
             const value = new TextDecoder().decode(event.target.value);
             console.log('Notificação recebida:', value);
         }
+        
+        // Mantém tela ativa e reconecta ao voltar
+        if ('wakeLock' in navigator) {
+            let wakeLock = null;
+            
+            async function requestWakeLock() {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake Lock ativo - tela não vai dormir');
+                } catch (err) {
+                    console.log('Wake Lock não disponível:', err);
+                }
+            }
+            
+            // Ativa quando conectar
+            document.addEventListener('bleconnected', requestWakeLock);
+        }
+        
+        // Reconecta quando app volta do background
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && bleDevice && !bleCharacteristic) {
+                console.log('App voltou - tentando reconectar...');
+                reconnect();
+            }
+        });
 
         async function sendCommand(cmd) {
             console.log("Comando:", cmd);
