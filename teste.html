@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Web Bluetooth</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+        }
+        #info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Diagnóstico Web Bluetooth</h1>
+    
+    <button onclick="testar()">TESTAR BLUETOOTH</button>
+    
+    <div id="info"></div>
+    
+    <script>
+        const infoDiv = document.getElementById('info');
+        
+        // Mostra informações do navegador
+        infoDiv.textContent = `Navegador: ${navigator.userAgent}\n\n`;
+        infoDiv.textContent += `navigator.bluetooth disponível: ${!!navigator.bluetooth}\n`;
+        infoDiv.textContent += `HTTPS: ${location.protocol === 'https:'}\n`;
+        infoDiv.textContent += `URL: ${location.href}\n`;
+        
+        async function testar() {
+            infoDiv.textContent += '\n--- INICIANDO TESTE ---\n';
+            
+            if (!navigator.bluetooth) {
+                infoDiv.textContent += '❌ navigator.bluetooth NÃO EXISTE\n';
+                infoDiv.textContent += '\nSOLUÇÕES:\n';
+                infoDiv.textContent += '1. Certifique-se de estar no SAFARI (não Chrome/Firefox)\n';
+                infoDiv.textContent += '2. iOS deve ser 16.0 ou superior\n';
+                infoDiv.textContent += '3. Vá em Ajustes → Safari → Avançado → Experimental Features\n';
+                infoDiv.textContent += '4. Procure e ATIVE "Web Bluetooth" ou "Bluetooth"\n';
+                return;
+            }
+            
+            infoDiv.textContent += '✅ navigator.bluetooth existe!\n';
+            infoDiv.textContent += '\nProcurando dispositivos BLE...\n';
+            
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b']
+                });
+                
+                infoDiv.textContent += `✅ Dispositivo encontrado: ${device.name}\n`;
+                
+            } catch (error) {
+                infoDiv.textContent += `❌ ERRO: ${error.name}\n`;
+                infoDiv.textContent += `Mensagem: ${error.message}\n`;
+                
+                if (error.name === 'NotFoundError') {
+                    infoDiv.textContent += '\nNenhum dispositivo encontrado.\n';
+                    infoDiv.textContent += 'Certifique-se de que o ESP32 está ligado!\n';
+                } else if (error.name === 'SecurityError') {
+                    infoDiv.textContent += '\nErro de segurança.\n';
+                    infoDiv.textContent += 'Precisa estar em HTTPS ou localhost\n';
+                } else if (error.name === 'NotSupportedError') {
+                    infoDiv.textContent += '\nWeb Bluetooth não suportado!\n';
+                    infoDiv.textContent += 'Ative nas configurações experimentais do Safari\n';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
