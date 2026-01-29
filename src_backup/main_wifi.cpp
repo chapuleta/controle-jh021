@@ -1,7 +1,7 @@
 /*
- * FIRMWARE EMISSOR IR - ESP32-C3 Super Mini Controle JH021 (BLE)
- * GPIO 10: LED IR Emissor (use GPIO livre - 10, 4, 5, 6, 7)
- * GPIO 8: LED Status (onboard no C3 Super Mini)
+ * FIRMWARE EMISSOR IR - ESP32 Controle JH021 (BLE)
+ * GPIO 15: LED IR Emissor
+ * GPIO 2: LED Status (onboard)
  * Comunicação: Bluetooth Low Energy (BLE)
  */
 
@@ -12,8 +12,8 @@
 #include <BLE2902.h>
 #include <IRsend.h>
 
-const uint16_t IR_LED_PIN = 10;  // GPIO 10 para IR (ajuste se necessário)
-const uint16_t STATUS_LED_PIN = 8;  // LED onboard do C3 Super Mini
+const uint16_t IR_LED_PIN = 15;
+const uint16_t STATUS_LED_PIN = 2;
 IRsend irsend(IR_LED_PIN);
 
 // UUIDs para BLE Service e Characteristic
@@ -121,21 +121,15 @@ void setup() {
     
     Serial.println("\n========================================");
     Serial.println("  EMISSOR IR BLE - CONTROLE JH021");
-    Serial.println("  ESP32-C3 Super Mini");
     Serial.println("========================================\n");
     
     irsend.begin();
     Serial.printf("Emissor IR: GPIO %d\n", IR_LED_PIN);
-    Serial.printf("LED Status: GPIO %d\n", STATUS_LED_PIN);
     
     Serial.println("Inicializando BLE...");
     
     // Inicializa BLE com nome do dispositivo
     BLEDevice::init("ESP32-JH021");
-    
-    // Aumenta potência do BLE para máximo alcance
-    BLEDevice::setPower(ESP_PWR_LVL_P9);  // +9dBm (potência máxima)
-    Serial.println("Potencia BLE: +9dBm (maximo alcance)");
     
     // Cria servidor BLE
     pServer = BLEDevice::createServer();
