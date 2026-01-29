@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Controle JH021 - BLE</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --remote-bg: #1a1a1a;
+            --btn-bg: #333333;
+            --btn-active: #4d4d4d;
+            --text-color: #ffffff;
+            --accent-red: #ff4444;
+            --accent-blue: #007bff;
+            --accent-light: #d1d5db; /* Cor dos botões direcionais */
+            --gap: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none; /* Previne seleção de texto ao clicar rápido */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Container do Controle */
+        .remote-body {
+            background-color: var(--remote-bg);
+            padding: 25px;
+            border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            width: 100%;
+            max-width: 320px; /* Largura similar a um controle real */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Grade de Botões */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 Colunas */
+            gap: var(--gap);
+            align-items: center;
+        }
+
+        /* Estilo Base do Botão */
+        .btn {
+            background-color: var(--btn-bg);
+            color: var(--text-color);
+            border: none;
+            border-radius: 12px;
+            height: 60px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.1s, background-color 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+            background-color: var(--btn-active);
+        }
+
+        /* Estilos Específicos */
+        .btn-red { background-color: var(--accent-red); }
+        .btn-blue { background-color: var(--accent-blue); font-size: 14px; }
+        .btn-light { 
+            background-color: var(--accent-light); 
+            color: #000;
+        }
+        .btn-light:active { background-color: #9ca3af; }
+
+        /* Labels e Texto Auxiliar */
+        .label-text {
+            color: #888;
+            font-size: 10px;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: -15px; /* Aproxima do botão abaixo */
+            margin-top: -5px;
+            grid-column: span 3;
+            letter-spacing: 1px;
+        }
+        
+        .label-sub {
+             font-size: 9px;
+             position: absolute;
+             bottom: 5px;
+             color: #aaa;
+        }
+
+        /* Ícones SVG */
+        svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        /* LED de Status (Feedback Visual) */
+        #status-led {
+            width: 10px;
+            height: 10px;
+            background-color: #333;
+            border-radius: 50%;
+            margin: 0 auto;
+            box-shadow: 0 0 2px #000;
+            transition: background-color 0.1s;
+        }
+        #status-led.active {
+            background-color: #0f0;
+            box-shadow: 0 0 10px #0f0;
+        }
+
+        .model-number {
+            text-align: right;
+            color: #555;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        /* Status de Conexão BLE */
+        #ble-status {
+            text-align: center;
+            padding: 12px;
+            background-color: #333;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        #ble-status.disconnected { 
+            background-color: #ff4444; 
+            color: white;
+            cursor: pointer;
+        }
+        #ble-status.connected { 
+            background-color: #00cc44; 
+            color: white;
+        }
+        #ble-status.connecting { 
+            background-color: #ffaa00; 
+            color: white;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="remote-body">
+        <!-- Status BLE -->
+        <div id="ble-status" class="disconnected" onclick="connectBLE()">
+            🔵 Clique para Conectar BLE
+        </div>
+        
+        <!-- LED Indicador -->
+        <div id="status-led"></div>
+
+        <div class="grid-container">
+            <!-- Row 1: Power, Up, 12/24 -->
+            <div class="label-text" style="margin-bottom: -10px;">CountUp</div>
+            <button class="btn btn-red" onclick="sendCommand('POWER')">
+                <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+            </button>
+            <button class="btn btn-light" onclick="sendCommand('UP')">
+                <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+            </button>
+            <button class="btn btn-blue" onclick="sendCommand('12_24')">12/24</button>
+
+            <!-- Row 2: Left, OK, Right -->
+            <button class="btn btn-light" onclick="sendCommand('LEFT')">
+                <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+            <button class="btn btn-light" onclick="sendCommand('OK')">OK</button>
+            <button class="btn btn-light" onclick="sendCommand('RIGHT')">
+                <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+            </button>
+
+            <!-- Row 3: Exit, Down, Set -->
+            <button class="btn" onclick="sendCommand('EXIT')">EXIT</button>
+            <button class="btn btn-light" onclick="sendCommand('DOWN')">
+                <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+            </button>
+            <button class="btn" onclick="sendCommand('SET')">SET</button>
+            
+            <div class="label-text" style="margin-top: -10px;">Countdown</div>
+
+            <!-- Row 4: 0, Clock, AL (Seguindo layout visual da imagem) -->
+            <button class="btn" onclick="sendCommand('0')">0</button>
+            <button class="btn" onclick="sendCommand('STOPWATCH')">
+                <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                <span class="label-sub" style="bottom: 2px; font-size: 7px;">STOPWATCH</span>
+            </button>
+            <button class="btn" onclick="sendCommand('AL')">AL</button>
+
+            <!-- Row 5: 1, 2, 3 -->
+            <button class="btn" onclick="sendCommand('1')">1</button>
+            <button class="btn" onclick="sendCommand('2')">2</button>
+            <button class="btn" onclick="sendCommand('3')">3</button>
+
+            <!-- Row 6: 4, 5, 6 -->
+            <button class="btn" onclick="sendCommand('4')">4</button>
+            <button class="btn" onclick="sendCommand('5')">5</button>
+            <button class="btn" onclick="sendCommand('6')">6</button>
+
+            <!-- Row 7: 7, 8, 9 -->
+            <button class="btn" onclick="sendCommand('7')">7</button>
+            <button class="btn" onclick="sendCommand('8')">8</button>
+            <button class="btn" onclick="sendCommand('9')">9</button>
+        </div>
+
+        <div class="model-number">JH021</div>
+    </div>
+
+    <script>
+        // Variáveis BLE
+        let bleDevice = null;
+        let bleCharacteristic = null;
+        const SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
+        const CHARACTERISTIC_UUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
+
+        // Função para conectar ao ESP32 via BLE
+        async function connectBLE() {
+            const statusEl = document.getElementById('ble-status');
+            
+            if (!navigator.bluetooth) {
+                alert('❌ Web Bluetooth não disponível neste navegador!\n\niOS: Use Safari 16+\nAndroid: Use Chrome');
+                return;
+            }
+
+            try {
+                statusEl.className = 'connecting';
+                statusEl.textContent = '🔄 Conectando...';
+                
+                console.log('Procurando ESP32-JH021...');
+                bleDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'ESP32-JH021' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                console.log('Dispositivo encontrado:', bleDevice.name);
+                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                
+                const server = await bleDevice.gatt.connect();
+                console.log('Conectado ao GATT Server');
+                
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                console.log('Serviço encontrado');
+                
+                bleCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+                console.log('Característica encontrada');
+                
+                // Habilita notificações
+                await bleCharacteristic.startNotifications();
+                bleCharacteristic.addEventListener('characteristicvaluechanged', handleNotification);
+                
+                statusEl.className = 'connected';
+                statusEl.textContent = '✅ Conectado ao ESP32';
+                statusEl.onclick = null; // Remove o clique quando conectado
+                
+                console.log('BLE conectado com sucesso!');
+                
+            } catch (error) {
+                console.error('Erro BLE:', error);
+                statusEl.className = 'disconnected';
+                statusEl.textContent = '🔵 Clique para Conectar BLE';
+                alert('Erro ao conectar: ' + error.message);
+            }
+        }
+
+        function onDisconnected() {
+            console.log('BLE desconectado');
+            const statusEl = document.getElementById('ble-status');
+            statusEl.className = 'disconnected';
+            statusEl.textContent = '🔵 Clique para Conectar BLE';
+            statusEl.onclick = connectBLE;
+            bleCharacteristic = null;
+        }
+
+        function handleNotification(event) {
+            const value = new TextDecoder().decode(event.target.value);
+            console.log('Notificação recebida:', value);
+        }
+
+        // Função de envio do comando
+        async function sendCommand(cmd) {
+            console.log("Comando:", cmd);
+            
+            // Verifica se está conectado
+            if (!bleCharacteristic) {
+                alert('⚠️ Conecte ao ESP32 primeiro!');
+                return;
+            }
+            
+            try {
+                // 1. Feedback Visual (LED)
+                const led = document.getElementById('status-led');
+                led.classList.add('active');
+                setTimeout(() => led.classList.remove('active'), 150);
+
+                // 2. Feedback Tátil (Vibração - apenas Mobile)
+                if (navigator.vibrate) {
+                    navigator.vibrate(30); 
+                }
+
+                // 3. Envio via BLE
+                const encoder = new TextEncoder();
+                await bleCharacteristic.writeValue(encoder.encode(cmd));
+                console.log('Comando enviado via BLE:', cmd);
+                
+            } catch (err) {
+                console.error("Erro ao enviar:", err);
+                alert('Erro ao enviar comando: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>
